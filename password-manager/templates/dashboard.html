@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Cofre de Senhas{% endblock %}
+{% block page_title %}Selecionar Cliente{% endblock %}
+{% block page_subtitle %}<div class="topbar-sub">Escolha um cliente para acessar as credenciais</div>{% endblock %}
+
+{% block content %}
+
+<!-- Welcome banner -->
+<div class="welcome-banner">
+  <div>
+    <h2>Bem-vindo, {{ current_user.username }}!</h2>
+    <p>
+      Você está autenticado como
+      <strong>{{ 'Administrador' if current_user.role == 'admin' else 'Membro da equipe' }}</strong>.
+      Selecione um cliente abaixo para acessar as credenciais.
+    </p>
+  </div>
+  <div class="banner-icon">🔐</div>
+</div>
+
+<!-- Search -->
+<div class="filter-bar">
+  <input
+    type="text"
+    id="clientSearch"
+    class="search-input"
+    placeholder="Buscar cliente..."
+  />
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('admin_client_new') }}" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Novo Cliente
+  </a>
+  {% endif %}
+</div>
+
+{% if clients %}
+<div class="clients-grid">
+  {% for client in clients %}
+  <a href="{{ url_for('client_detail', client_id=client.id) }}" class="client-card">
+    <div class="client-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <div class="client-name">{{ client.name }}</div>
+    {% if client.description %}
+    <div class="client-desc">{{ client.description }}</div>
+    {% endif %}
+    <div class="client-count">
+      {{ client.passwords | length }} credencial{{ 'is' if client.passwords | length != 1 else '' }}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+  <p>Nenhum cliente cadastrado ainda.</p>
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('admin_client_new') }}" class="btn btn-primary" style="margin-top:16px;">
+    Adicionar primeiro cliente
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

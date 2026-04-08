@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if client else 'Novo' }} Cliente — Cofre de Senhas{% endblock %}
+{% block page_title %}{{ 'Editar Cliente' if client else 'Novo Cliente' }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{{ url_for('admin_clients') }}">Clientes</a>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  <span>{{ 'Editar' if client else 'Novo' }}</span>
+</div>
+
+<div class="card" style="max-width:560px;">
+  <div class="card-header">
+    <span class="card-title">{{ 'Editar Cliente' if client else 'Cadastrar Cliente' }}</span>
+  </div>
+  <div class="card-body">
+    <form method="POST" novalidate>
+      <div class="form-group">
+        <label>Nome do Cliente *</label>
+        <input type="text" name="name" class="form-control"
+               value="{{ client.name if client else '' }}" placeholder="Ex: Empresa XYZ" required autofocus />
+      </div>
+
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea name="description" class="form-control"
+                  placeholder="Breve descrição do cliente (opcional)">{{ client.description if client else '' }}</textarea>
+      </div>
+
+      {% if client %}
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;">
+          <input type="checkbox" name="active" {% if client.active %}checked{% endif %}
+                 style="width:16px;height:16px;cursor:pointer;" />
+          Cliente ativo
+        </label>
+      </div>
+      {% endif %}
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Salvar Alterações' if client else 'Cadastrar Cliente' }}
+        </button>
+        <a href="{{ url_for('admin_clients') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if user else 'Novo' }} Usuário — Cofre de Senhas{% endblock %}
+{% block page_title %}{{ 'Editar Usuário' if user else 'Novo Usuário' }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{{ url_for('admin_users') }}">Usuários</a>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  <span>{{ 'Editar' if user else 'Novo' }}</span>
+</div>
+
+<div class="card" style="max-width:480px;">
+  <div class="card-header">
+    <span class="card-title">{{ 'Editar Usuário' if user else 'Cadastrar Usuário' }}</span>
+  </div>
+  <div class="card-body">
+    <form method="POST" autocomplete="off" novalidate>
+      <div class="form-group">
+        <label>Nome de Usuário *</label>
+        <input type="text" name="username" class="form-control"
+               value="{{ user.username if user else '' }}"
+               placeholder="nome.sobrenome" required autofocus />
+      </div>
+
+      <div class="form-group">
+        <label>Senha {{ '(deixe em branco para manter)' if user else '*' }}</label>
+        <input type="password" name="password" class="form-control" autocomplete="new-password"
+               placeholder="••••••••" {{ 'required' if not user else '' }} />
+      </div>
+
+      <div class="form-group">
+        <label>Perfil de Acesso</label>
+        <select name="role" class="form-control">
+          <option value="team" {{ 'selected' if user and user.role == 'team' else '' }}>Equipe — apenas visualizar e copiar senhas</option>
+          <option value="admin" {{ 'selected' if user and user.role == 'admin' else '' }}>Administrador — acesso total</option>
+        </select>
+      </div>
+
+      {% if user %}
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;">
+          <input type="checkbox" name="active" {% if user.active %}checked{% endif %}
+                 style="width:16px;height:16px;cursor:pointer;" />
+          Usuário ativo
+        </label>
+      </div>
+      {% endif %}
+
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-primary">
+          {{ 'Salvar Alterações' if user else 'Criar Usuário' }}
+        </button>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-outline">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

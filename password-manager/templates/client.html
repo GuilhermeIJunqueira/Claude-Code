@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.name }} — Cofre de Senhas{% endblock %}
+{% block page_title %}{{ client.name }}{% endblock %}
+{% block page_subtitle %}
+  <div class="topbar-sub">
+    {{ client.description or 'Credenciais do cliente' }}
+  </div>
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('admin_passwords', client_id=client.id) }}" class="btn btn-outline" style="font-size:13px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+    Gerenciar
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="breadcrumb">
+  <a href="{{ url_for('dashboard') }}">Clientes</a>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+  <span>{{ client.name }}</span>
+</div>
+
+{% if passwords %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Credenciais ({{ passwords | length }})
+    </span>
+    <small style="color:var(--muted);font-size:12px;">
+      Clique em
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      para copiar. O acesso é registrado.
+    </small>
+  </div>
+
+  <table class="pw-table">
+    <thead>
+      <tr>
+        <th>Serviço</th>
+        <th>Login</th>
+        <th>Senha</th>
+        {% if passwords | selectattr('notes') | list %}
+        <th>Observações</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for pw in passwords %}
+      <tr>
+        <!-- Service -->
+        <td>
+          <div class="pw-service">
+            <div class="pw-service-icon">
+              {{ pw.service_name[0].upper() }}
+            </div>
+            <div>
+              <div style="font-weight:700;">{{ pw.service_name }}</div>
+              {% if pw.description %}
+              <div style="font-size:12px;color:var(--muted);font-weight:400;">{{ pw.description }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+
+        <!-- Login -->
+        <td>
+          {% if pw.login %}
+          <div class="pw-field-wrap">
+            <div class="pw-value" id="login-{{ pw.id }}" title="{{ pw.login }}">
+              {{ pw.login }}
+            </div>
+            <button
+              class="btn-icon"
+              title="Copiar login"
+              onclick="copyField({{ pw.id }}, 'login', this)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+          {% else %}
+          <span style="color:var(--muted);font-size:13px;">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Password -->
+        <td>
+          <div class="pw-field-wrap">
+            <div class="pw-value" id="pw-{{ pw.id }}">
+              ••••••••••
+            </div>
+            <button
+              class="btn-icon"
+              title="Copiar senha"
+              onclick="copyField({{ pw.id }}, 'password', this)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+
+        <!-- Notes -->
+        {% if passwords | selectattr('notes') | list %}
+        <td style="font-size:13px;color:var(--muted);max-width:220px;">
+          {{ pw.notes or '—' }}
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="empty-state">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+  <p>Nenhuma credencial cadastrada para este cliente.</p>
+  {% if current_user.role == 'admin' %}
+  <a href="{{ url_for('admin_password_new', client_id=client.id) }}" class="btn btn-primary" style="margin-top:16px;">
+    Adicionar credencial
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

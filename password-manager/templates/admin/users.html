@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários — Cofre de Senhas{% endblock %}
+{% block page_title %}Usuários{% endblock %}
+{% block page_subtitle %}<div class="topbar-sub">Gerenciar contas de acesso ao sistema</div>{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin_user_new') }}" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Novo Usuário
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Usuário</th>
+        <th>Perfil</th>
+        <th>Status</th>
+        <th>Criado em</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="user-avatar" style="width:32px;height:32px;font-size:13px;">
+              {{ user.username[0].upper() }}
+            </div>
+            <strong>{{ user.username }}</strong>
+            {% if user.id == current_user.id %}
+            <span style="font-size:11px;color:var(--muted);">(você)</span>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <span class="badge badge-{{ user.role }}">
+            {{ 'Administrador' if user.role == 'admin' else 'Equipe' }}
+          </span>
+        </td>
+        <td>
+          <span class="badge badge-{{ 'active' if user.active else 'inactive' }}">
+            {{ 'Ativo' if user.active else 'Inativo' }}
+          </span>
+        </td>
+        <td style="font-size:13px;color:var(--muted);">
+          {{ user.created_at.strftime('%d/%m/%Y') }}
+        </td>
+        <td>
+          <a href="{{ url_for('admin_user_edit', user_id=user.id) }}" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+            Editar
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

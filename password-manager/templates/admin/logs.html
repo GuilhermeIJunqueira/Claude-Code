@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Logs de Acesso — Cofre de Senhas{% endblock %}
+{% block page_title %}Logs de Acesso{% endblock %}
+{% block page_subtitle %}<div class="topbar-sub">Histórico completo de ações no sistema</div>{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-body" style="padding:16px 24px;">
+    <form method="GET" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+        <label>Usuário</label>
+        <input type="text" name="user" class="form-control" placeholder="Filtrar por usuário" value="{{ user_filter }}" />
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+        <label>Cliente</label>
+        <input type="text" name="client" class="form-control" placeholder="Filtrar por cliente" value="{{ client_filter }}" />
+      </div>
+      <div class="form-group" style="margin:0;min-width:180px;">
+        <label>Ação</label>
+        <select name="action" class="form-control">
+          <option value="">Todas</option>
+          {% for a in actions %}
+          <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>
+            {{ a | replace('_', ' ') | title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="{{ url_for('admin_logs') }}" class="btn btn-outline">Limpar</a>
+    </form>
+  </div>
+</div>
+
+<!-- Log table -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      Registros
+      <span style="color:var(--muted);font-weight:400;font-size:13px;margin-left:6px;">
+        ({{ logs.total }} no total)
+      </span>
+    </span>
+  </div>
+
+  {% if logs.items %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Usuário</th>
+        <th>Ação</th>
+        <th>Cliente</th>
+        <th>Credencial</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs.items %}
+      <tr>
+        <td style="white-space:nowrap;color:var(--muted);font-size:13px;">
+          {{ log.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+        </td>
+        <td>
+          <strong>{{ log.user.username }}</strong>
+          <span class="badge badge-{{ log.user.role }}" style="margin-left:4px;">
+            {{ 'ADM' if log.user.role == 'admin' else 'Equipe' }}
+          </span>
+        </td>
+        <td>
+          <span class="action-label action-{{ log.action }}">
+            {{ log.action | replace('_', ' ') | title }}
+          </span>
+        </td>
+        <td>
+          {% if log.client %}
+            <a href="{{ url_for('client_detail', client_id=log.client.id) }}">{{ log.client.name }}</a>
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-size:13px;color:var(--muted);">
+          {% if log.password_entry %}{{ log.password_entry.service_name }}{% else %}—{% endif %}
+        </td>
+        <td style="font-size:12px;color:var(--muted);font-family:monospace;">
+          {{ log.ip_address or '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Pagination -->
+  {% if logs.pages > 1 %}
+  <div style="padding:16px 24px;border-top:1px solid var(--border);">
+    <div class="pagination">
+      <a href="{{ url_for('admin_logs', page=logs.prev_num, user=user_filter, action=action_filter, client=client_filter) if logs.has_prev else '#' }}"
+         class="page-btn {{ 'disabled' if not logs.has_prev }}">&#8592; Anterior</a>
+
+      {% for p in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          <a href="{{ url_for('admin_logs', page=p, user=user_filter, action=action_filter, client=client_filter) }}"
+             class="page-btn {{ 'current' if p == logs.page }}">{{ p }}</a>
+        {% else %}
+          <span class="page-btn disabled">…</span>
+        {% endif %}
+      {% endfor %}
+
+      <a href="{{ url_for('admin_logs', page=logs.next_num, user=user_filter, action=action_filter, client=client_filter) if logs.has_next else '#' }}"
+         class="page-btn {{ 'disabled' if not logs.has_next }}">Próxima &#8594;</a>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    <p>Nenhum registro encontrado.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

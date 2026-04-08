@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Clientes — Cofre de Senhas{% endblock %}
+{% block page_title %}Gerenciar Clientes{% endblock %}
+{% block page_subtitle %}<div class="topbar-sub">Cadastro e manutenção de clientes</div>{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin_client_new') }}" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Novo Cliente
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if clients %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Descrição</th>
+        <th>Credenciais</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in clients %}
+      <tr>
+        <td><strong>{{ client.name }}</strong></td>
+        <td style="color:var(--muted);font-size:13px;">{{ client.description or '—' }}</td>
+        <td>
+          <a href="{{ url_for('admin_passwords', client_id=client.id) }}" style="font-weight:600;">
+            {{ client.passwords | length }} credencial{{ 'is' if client.passwords | length != 1 else '' }}
+          </a>
+        </td>
+        <td>
+          <span class="badge badge-{{ 'active' if client.active else 'inactive' }}">
+            {{ 'Ativo' if client.active else 'Inativo' }}
+          </span>
+        </td>
+        <td>
+          <div class="action-btns">
+            <a href="{{ url_for('client_detail', client_id=client.id) }}" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+              Ver
+            </a>
+            <a href="{{ url_for('admin_passwords', client_id=client.id) }}" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+              Senhas
+            </a>
+            <a href="{{ url_for('admin_client_edit', client_id=client.id) }}" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+              Editar
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+    </svg>
+    <p>Nenhum cliente cadastrado.</p>
+    <a href="{{ url_for('admin_client_new') }}" class="btn btn-primary" style="margin-top:16px;">Adicionar primeiro cliente</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
