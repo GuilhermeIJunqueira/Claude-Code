@@ -1,6 +1,6 @@
 import os
 import bcrypt
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
@@ -12,6 +12,7 @@ from flask_login import (
     LoginManager, login_user, logout_user,
     login_required, current_user
 )
+from sqlalchemy import func
 from models import db, User, Client, Password, AccessLog
 
 load_dotenv()
@@ -126,7 +127,62 @@ def logout():
 @login_required
 def dashboard():
     clients = Client.query.filter_by(active=True).order_by(Client.name).all()
-    return render_template("dashboard.html", clients=clients)
+
+    # Stats
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    stats = {}
+
+    if current_user.role == "admin":
+        stats["total_clients"]  = Client.query.filter_by(active=True).count()
+        stats["total_passwords"] = Password.query.count()
+        stats["total_users"]    = User.query.filter_by(active=True).count()
+        stats["accesses_today"] = AccessLog.query.filter(
+            AccessLog.timestamp >= today_start,
+            AccessLog.action.in_(["copy_login", "copy_password", "view_client"])
+        ).count()
+    else:
+        stats["total_clients"]   = len(clients)
+        stats["total_passwords"] = db.session.query(func.count(Password.id)).scalar()
+        stats["my_accesses_today"] = AccessLog.query.filter(
+            AccessLog.user_id == current_user.id,
+            AccessLog.timestamp >= today_start,
+        ).count()
+
+    # Recent logs (admin: all; team: own)
+    log_query = (
+        AccessLog.query
+        .order_by(AccessLog.timestamp.desc())
+        .limit(10)
+    )
+    if current_user.role != "admin":
+        log_query = (
+            AccessLog.query
+            .filter_by(user_id=current_user.id)
+            .order_by(AccessLog.timestamp.desc())
+            .limit(10)
+        )
+    recent_logs = log_query.all()
+
+    # Top accessed clients (last 30 days)
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+    top_clients = (
+        db.session.query(Client, func.count(AccessLog.id).label("cnt"))
+        .join(AccessLog, AccessLog.client_id == Client.id)
+        .filter(AccessLog.timestamp >= since, Client.active == True)
+        .group_by(Client.id)
+        .order_by(func.count(AccessLog.id).desc())
+        .limit(5)
+        .all()
+    )
+
+    return render_template(
+        "dashboard.html",
+        clients=clients,
+        stats=stats,
+        recent_logs=recent_logs,
+        top_clients=top_clients,
+        now=datetime.now(timezone.utc),
+    )
 
 
 @app.route("/client/<int:client_id>")
