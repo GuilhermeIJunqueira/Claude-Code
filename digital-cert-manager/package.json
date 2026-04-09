@@ -1,0 +1,13 @@
+{
+  "name": "whom-cert-manager",
+  "version": "1.0.0",
+  "description": "Whom.doc9 - Gerenciador de Certificados Digitais",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
