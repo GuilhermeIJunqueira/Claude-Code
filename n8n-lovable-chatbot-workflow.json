@@ -1,0 +1,393 @@
+{
+  "name": "Lovable Chatbot Automation - OpenAI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lovable-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Receber Arquivo do Lovable",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "lovable-chatbot-trigger"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "text": "={{ $json.body.fileContent || $json.body.message || $json.body.prompt || JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "set-input",
+      "name": "Extrair Conteudo do Arquivo",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "file-content",
+              "name": "fileContent",
+              "value": "={{ $json.body.fileContent || $json.body.message || $json.body.prompt || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "project-id",
+              "name": "projectId",
+              "value": "={{ $json.body.projectId || $json.body.project_id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "file-path",
+              "name": "filePath",
+              "value": "={{ $json.body.filePath || $json.body.file_path || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "callback-url",
+              "name": "callbackUrl",
+              "value": "={{ $json.body.callbackUrl || $json.body.callback_url || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-fields",
+      "name": "Extrair Campos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Voce e um assistente especializado em projetos Lovable. Analise o conteudo do arquivo enviado, identifique possiveis melhorias, bugs ou sugestoes, e responda de forma clara e objetiva em portugues.\n\nContexto do projeto:\n- Project ID: {{ $json.projectId }}\n- Caminho do arquivo: {{ $json.filePath }}\n\nConteudo do arquivo:\n```\n{{ $json.fileContent }}\n```\n\nPor favor, forneca:\n1. Analise geral do codigo/conteudo\n2. Problemas encontrados (se houver)\n3. Sugestoes de melhoria\n4. Codigo corrigido/melhorado (se aplicavel)",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 4096
+        }
+      },
+      "id": "openai-chat",
+      "name": "OpenAI - Analisar com ChatGPT",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [740, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "SUBSTITUA_PELA_SUA_CREDENCIAL_OPENAI",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "response-text",
+              "name": "responseText",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "project-id-out",
+              "name": "projectId",
+              "value": "={{ $('Extrair Campos').item.json.projectId }}",
+              "type": "string"
+            },
+            {
+              "id": "file-path-out",
+              "name": "filePath",
+              "value": "={{ $('Extrair Campos').item.json.filePath }}",
+              "type": "string"
+            },
+            {
+              "id": "callback-url-out",
+              "name": "callbackUrl",
+              "value": "={{ $('Extrair Campos').item.json.callbackUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-response",
+      "name": "Formatar Resposta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-callback",
+              "leftValue": "={{ $json.callbackUrl }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-callback",
+      "name": "Tem Callback URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callbackUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"success\",\n  \"projectId\": \"{{ $json.projectId }}\",\n  \"filePath\": \"{{ $json.filePath }}\",\n  \"analysis\": {{ JSON.stringify($json.responseText) }},\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"source\": \"n8n-openai-automation\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-to-lovable",
+      "name": "HTTP Request - Enviar para Lovable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"projectId\": \"{{ $json.projectId }}\",\n  \"filePath\": \"{{ $json.filePath }}\",\n  \"analysis\": {{ JSON.stringify($json.responseText) }},\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"source\": \"n8n-openai-automation\"\n}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"projectId\": \"{{ $('Formatar Resposta').item.json.projectId }}\",\n  \"filePath\": \"{{ $('Formatar Resposta').item.json.filePath }}\",\n  \"analysis\": {{ JSON.stringify($('Formatar Resposta').item.json.responseText) }},\n  \"callbackSent\": true,\n  \"timestamp\": \"{{ $('Formatar Resposta').item.json.timestamp }}\",\n  \"source\": \"n8n-openai-automation\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-after-callback",
+      "name": "Responder Webhook (Apos Callback)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error",
+              "value": "={{ $json.message || 'Erro desconhecido ao processar arquivo' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-handler",
+      "name": "Tratar Erro",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1000, 520]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"error\",\n  \"message\": {{ JSON.stringify($json.error) }},\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-error",
+      "name": "Responder Erro",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1260, 520]
+    }
+  ],
+  "connections": {
+    "Webhook - Receber Arquivo do Lovable": {
+      "main": [
+        [
+          {
+            "node": "Extrair Campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Campos": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Analisar com ChatGPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Analisar com ChatGPT": {
+      "main": [
+        [
+          {
+            "node": "Formatar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Tem Callback URL?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Callback URL?": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Enviar para Lovable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Enviar para Lovable": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook (Apos Callback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tratar Erro": {
+      "main": [
+        [
+          {
+            "node": "Responder Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "lovable",
+      "id": "tag-lovable"
+    },
+    {
+      "name": "openai",
+      "id": "tag-openai"
+    },
+    {
+      "name": "chatbot",
+      "id": "tag-chatbot"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {},
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}
